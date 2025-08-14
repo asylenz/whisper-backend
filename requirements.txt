@@ -1,2 +1,5 @@
-pillow==10.3.0
-pypdf==4.2.0
+pillow
+pypdf
+Flask
+Flask-Cors
+gunicorn
