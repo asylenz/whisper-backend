@@ -1,57 +1,55 @@
-# Image Extractor for PowerPoint, Word and PDF
+# Image Extractor Backend
 
-![powerpoint-pdf-image-extractor-github](https://github.com/user-attachments/assets/c177bb10-7da0-418d-8a74-15ea2fe3239f)
-
-
-A CLI tool to extract images from PowerPoint, Word and PDF files written in Python 🐍. This script extract all images in your .pptx, .docx, or .pdf file into a local folder. The benefit of using this tool to extract images over taking screenshots is that you get the highest resolution possible.
-
-## Use Cases
-
-- 1️⃣ Extract images from PowerPoint presentations
-- 2️⃣ Extract images from Word (doc/docx) documents
-- 3️⃣ Extract images from PDF files
-
-## Features
-
-- ⬇️ Extract and download all images within a PowerPoint, Word or PDF
-- 📁 Supports all image file types (jpg, png, jp2, gif, tiff, ...)
-- 📑 Supports extracing images from: PowerPoint (.pptx, .ppt), Word (.docx, .doc) and PDF (.pdf)
-- 📸 High resolution images: Images are not compressed
-- 📀 Runs locally: Keep your data
+This backend is a simple Flask application that provides an API to extract images from PDF, DOCX, and PPTX files.
 
 ## Setup
 
-Create a virtual Python env
-```
-python3 -m venv env
-```
+1.  **Create and activate a virtual environment:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
 
-Activate the virtual env
-```
-source env/bin/activate
-```
+2.  **Install the dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    pip install Flask Flask-Cors
+    ```
 
-Using [pip](https://pip.pypa.io/en/stable/installation/) install all dependencies
-```
-pip3 install -r requirements.txt
-```
+    **Note for DOCX/PPTX:** This script uses `unzip`. On macOS and most Linux distributions, this is pre-installed. If you are deploying on a minimal environment, ensure `unzip` is installed.
 
-## Requirements
+## Running the Server
 
-You need to have [7Zip](https://www.7-zip.org) installed because under the hood `unzip` is used to unarchive and archive the pptx files.
-
-## Usage
-
-```
-python3 image_extractor.py <INPUT_FILE_PATH>
+To start the Flask development server, run:
+```bash
+python app.py
 ```
 
-_⚠️ Note:_ All images of the PowerPoint, PDF or Word document will be extracted to a folder called `extracted_images` in the same folder as the original document.
+The server will start on `http://127.0.0.1:5001` by default.
 
-## License 
+## API Endpoint
 
-Apache License 2.0: See `LICENSE` file
+### `POST /extract-images`
 
-## Author
+Upload a file to extract images.
 
-Written and maintained by [SlideSpeak.co](https://slidespeak.co)
+-   **Form Data:**
+    -   `file`: The PDF, DOCX, or PPTX file.
+
+-   **Success Response (200):**
+    ```json
+    {
+      "images": [
+        "base64-encoded-image-string-1",
+        "base64-encoded-image-string-2",
+        ...
+      ]
+    }
+    ```
+
+-   **Error Response (400, 500):**
+    ```json
+    {
+      "error": "Error message description"
+    }
+    ```

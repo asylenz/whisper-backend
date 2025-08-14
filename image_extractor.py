@@ -6,6 +6,9 @@ from pypdf import PdfReader
 from PIL import Image
 import io
 import sys
+import base64
+import tempfile
+import shutil
 
 
 def generate_uuid_filename(extension):
@@ -15,6 +18,100 @@ def generate_uuid_filename(extension):
 def ensure_directory_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+def extract_images_as_base64(file_path: str):
+    _, file_extension = os.path.splitext(file_path)
+    file_extension = file_extension.lower()
+
+    if file_extension == ".pdf":
+        return extract_images_from_pdf_as_base64(file_path)
+    elif file_extension == ".docx":
+        return extract_images_from_docx_as_base64(file_path)
+    elif file_extension == ".pptx":
+        return extract_images_from_pptx_as_base64(file_path)
+    else:
+        logging.error(f"Unsupported file type: {file_extension}")
+        return []
+
+def extract_images_from_pdf_as_base64(pdf_file_path: str):
+    images = []
+    try:
+        reader = PdfReader(pdf_file_path)
+        seen_images = set()
+
+        for page in reader.pages:
+            for image in page.images:
+                image_data = image.data
+                image_hash = hash(image_data)
+
+                if image_hash in seen_images:
+                    continue
+
+                seen_images.add(image_hash)
+                
+                ext = os.path.splitext(image.name)[1].lower()
+                if ext == ".jp2":
+                     try:
+                        with Image.open(io.BytesIO(image_data)) as img:
+                            if img.mode == "RGBA":
+                                img = img.convert("RGB")
+                            buffered = io.BytesIO()
+                            img.save(buffered, format="PNG")
+                            image_data = buffered.getvalue()
+                     except Exception as e:
+                        logging.error(f"Failed to convert JP2 to PNG: {e}")
+                        continue
+
+                images.append(base64.b64encode(image_data).decode('utf-8'))
+    except Exception as e:
+        logging.error(f"Failed to extract images from {pdf_file_path}: {e}")
+    return images
+
+
+def extract_images_from_docx_as_base64(docx_file_path: str):
+    images = []
+    temp_dir = tempfile.mkdtemp()
+    try:
+        subprocess.run(
+            ["unzip", "-j", docx_file_path, "word/media/*", "-d", temp_dir],
+            check=True,
+            shell=False,
+        )
+        for filename in os.listdir(temp_dir):
+            original_path = os.path.join(temp_dir, filename)
+            with open(original_path, "rb") as f:
+                images.append(base64.b64encode(f.read()).decode('utf-8'))
+    except Exception as e:
+        logging.error(f"Failed to extract images from {docx_file_path}: {e}")
+    finally:
+        shutil.rmtree(temp_dir)
+    return images
+
+
+def extract_images_from_pptx_as_base64(pptx_file_path: str):
+    images = []
+    temp_dir = tempfile.mkdtemp()
+    try:
+        subprocess.run(
+            ["unzip", "-j", pptx_file_path, "ppt/media/*", "-d", temp_dir],
+            check=True,
+            shell=False,
+        )
+        valid_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
+        for filename in os.listdir(temp_dir):
+             _, ext = os.path.splitext(filename)
+             if ext.lower() in valid_extensions:
+                original_path = os.path.join(temp_dir, filename)
+                with open(original_path, "rb") as f:
+                    images.append(base64.b64encode(f.read()).decode('utf-8'))
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to unzip and extract images from {pptx_file_path}: {e}")
+    except Exception as e:
+        logging.error(f"An error occurred while processing {pptx_file_path}: {e}")
+    finally:
+        shutil.rmtree(temp_dir)
+    return images
 
 
 def extract_images(file_path: str):
